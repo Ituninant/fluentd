@@ -1,0 +1,35 @@
+<included>
+    <!-- Fluend java -->
+    <property name="FLUENTD_HOST" value="${FLUENTD_HOST:-${DOCKER_HOST:-localhost}}"/>
+    <property name="FLUENTD_PORT" value="${FLUENTD_PORT:-24224}"/>
+
+    <appender name="FLUENT_SYNC" class="ch.qos.logback.more.appenders.DataFluentAppender">
+        <!-- Tag for Fluentd. Farther information: http://docs.fluentd.org/articles/config-file -->
+        <tag>FLUENT-APPENDER</tag>
+        <!-- [Optional] Label for Fluentd. -->
+        <label>LOGBACK</label>
+        <!-- Host name/address and port number which Flentd placed -->
+        <remoteHost>${FLUENTD_HOST}</remoteHost>
+        <port>${FLUENTD_PORT}</port>
+        <flattenMapMarker>false</flattenMapMarker>
+
+        <encoder>
+            <pattern><![CDATA[%date{HH:mm:ss.SSS} [%thread] %-5level %logger{15}#%line %msg]]></pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FLUENT" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- Max queue size of logs which is waiting to be sent (When it reach to the max size, the log will be disappeared). -->
+        <queueSize>999</queueSize>
+        <!-- Never block when the queue becomes full. -->
+        <neverBlock>true</neverBlock>
+        <!--
+             The default maximum queue flush time allowed during appender stop.
+             If the worker takes longer than this time it will exit, discarding any remaining items in the queue.
+             10000 millis
+         -->
+        <maxFlushTime>10000</maxFlushTime>
+        <appender-ref ref="FLUENT_SYNC" />
+    </appender>
+
+</included>

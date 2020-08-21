@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+    <springProfile name="production">
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <!-- daily rollover -->
+                <fileNamePattern>logs/ldap-adapter-log.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+                <!-- keep 5 days' worth of history capped at 3GB total size -->
+                <maxHistory>5</maxHistory>
+                <totalSizeCap>3GB</totalSizeCap>
+            </rollingPolicy>
+            <append>true</append>
+            <immediateFlush>true</immediateFlush>
+            <encoder>
+                <pattern>[%date] [%-5level] [%t]  %logger{1.}.%M:%L - %m%n</pattern>
+            </encoder>
+        </appender>
+
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <charset>UTF-8</charset>
+                <pattern>%black(%date{ISO8601}) %highlight(%-5level) [%blue(%t)] %yellow(%C{50}.%M:%L): %msg%n%throwable</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="ru.vtb.lkd.ldap" level="debug" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+
+        <root level="info">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+    <springProfile name="dev">
+
+<!--        <include resource="org/springframework/boot/logging/logback/base.xml"/>-->
+<!--        <property name="FLUENTD_HOST" value="${FLUENTD_HOST:-${DOCKER_HOST:-localhost}}"/>-->
+<!--        <property name="FLUENTD_PORT" value="${FLUENTD_PORT:-24224}"/>-->
+<!--        <appender name="FLUENT" class="ch.qos.logback.more.appenders.DataFluentAppender">-->
+<!--            <tag>dab</tag>-->
+<!--            <label>normal</label>-->
+<!--            <remoteHost>${FLUENTD_HOST}</remoteHost>-->
+<!--            <port>${FLUENTD_PORT}</port>-->
+<!--        </appender>-->
+
+<!--        <logger name="log" level="debug" additivity="false">-->
+<!--            <appender-ref ref="CONSOLE" />-->
+<!--            <appender-ref ref="FILE" />-->
+<!--            <appender-ref ref="FLUENT" />-->
+<!--        </logger>-->
+
+        <!-- use Spring default values -->
+        <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+        <include resource="logback-appenders-fluentd.xml" />
+
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+                <charset>utf8</charset>
+            </encoder>
+        </appender>
+
+        <logger name="fluentd" level="debug" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FLUENT" />
+        </logger>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FLUENT" />
+        </root>
+    </springProfile>
+</configuration>

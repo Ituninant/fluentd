@@ -1,0 +1,120 @@
+---
+- hosts: localhost
+  remote_user: "{{ JSLAVE_USERNAME }}"
+  any_errors_fatal: true
+  vars_files:
+    - "vars/vars.yml"
+  tasks:
+  - name: Ensure group "{{ PROJECT_CODE }}" exists
+    group:
+      name: "{{ PROJECT_CODE }}"
+      state: present
+    become: yes
+
+  - name: Ensure host NOT exists in hosts
+    lineinfile:
+      path: /etc/hosts
+      state: absent
+      regexp: "(^.*{{ item }}.*)"
+    with_items:
+      - "vtb-reports"
+    become: yes
+
+  - name: Ensure host exists in hosts
+    lineinfile:
+      path: /etc/hosts
+      line: "{{ VTB_REPORTS_HOST }} vtb-reports"
+    become: yes
+
+  - name: Chown /srv
+    file:
+      path: "/srv"
+      owner: "{{ JSLAVE_USERNAME }}"
+      group: "{{ JSLAVE_USERNAME }}"
+    become: yes
+
+  - name: Make dir for generated files
+    file:
+      path: "{{ item }}"
+      owner: "{{ JSLAVE_USERNAME }}"
+      group: "{{ PROJECT_CODE }}"
+      mode: "774"
+      state: directory
+      recurse: yes
+    with_items:
+      - "{{ GENERATED_FILES_PATH }}/"
+    become: yes
+
+  - name: Docker build fluentd image
+    shell: "cd {{ WORKSPACE }}/ENV/fluentd && docker build -t {{ IMAGE_FLUENTD }} ."
+
+  - name: Docker push fluentd image
+    shell: "docker push {{ IMAGE_FLUENTD }}"
+
+  - name: docker images prune
+    shell: docker image prune -f
+
+  - name: generate docker-compose.yml
+    template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ JSLAVE_USERNAME }}"
+      mode: '774'
+    with_items:
+      - { src: "{{ WORKSPACE }}/jenkins/ansible/templates/docker-compose.yml.j2", dest: "{{ GENERATED_FILES_PATH }}/docker-compose.yml" }
+    become: yes
+
+
+
+- hosts: vtb_reports
+  any_errors_fatal: true
+  vars_files:
+    - "vars/vars.yml"
+  tasks:
+  - name: Ensure group "{{ PROJECT_CODE }}" exists
+    group:
+      name: "{{ PROJECT_CODE }}"
+      state: present
+    become: yes
+
+  - name: Chown /srv
+    file:
+      path: "/srv"
+      owner: "{{ JSLAVE_USERNAME }}"
+      group: "{{ JSLAVE_USERNAME }}"
+    become: yes
+
+  - name: Make dir for stand files
+    file:
+      path: "{{ item }}"
+      owner: "{{ JSLAVE_USERNAME }}"
+      group: "{{ PROJECT_CODE }}"
+      mode: "774"
+      state: directory
+      recurse: yes
+    with_items:
+      - "{{ TARGET_DIR }}"
+    become: yes
+
+  - name: Copy docker-compose.yml to stand
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ JSLAVE_USERNAME }}"
+      group: "{{ PROJECT_CODE }}"
+      mode: '774'
+    with_items:
+      - { src: "{{ GENERATED_FILES_PATH }}/docker-compose.yml", dest: "{{ TARGET_DIR }}" }
+      - { src: "{{ GENERATED_FILES_PATH }}/ENV/fluentd", dest: "{{ TARGET_DIR }}" }
+    
+    become: yes
+
+  - name: docker-compose pull
+    shell: "docker-compose -f {{ TARGET_DIR }}/docker-compose.yml pull"
+
+  - name: docker-compose down
+    shell: "docker-compose -f {{ TARGET_DIR }}/docker-compose.yml down"
+
+  - name: docker-compose up
+    shell: "docker-compose -f {{ TARGET_DIR }}/docker-compose.yml up -d"
+

@@ -1,0 +1,8 @@
+[vtb_reports]
+vtb-reports
+[vtb_reports:vars]
+ansible_connection=ssh
+ansible_user={{ VTB_REPORTS_USERNAME }}
+ansible_become_pass={{ VTB_REPORTS_PASSWORD }}
+# ansible_ssh_private_key_file="/home/{{JSLAVE_USERNAME}}/.ssh/id_rsa"
+ansible_ssh_pass={{ VTB_REPORTS_PASSWORD }}

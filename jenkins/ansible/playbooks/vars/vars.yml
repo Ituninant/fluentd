@@ -1,0 +1,10 @@
+---
+# PROJECT_CODE: "vtb-fluentd"
+
+VTB_REPORTS_HOST: 192.168.15.11
+
+TARGET_DIR: /srv/{{ PROJECT_CODE }}/stands/{{ GIT_BRANCH }}
+
+IMAGE_FLUENTD: "jslave:5001/vtb-reports-fluentd"
+
+GENERATED_FILES_PATH: /srv/{{ PROJECT_CODE }}/generated/{{ GIT_BRANCH }}

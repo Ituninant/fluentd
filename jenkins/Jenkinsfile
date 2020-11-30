@@ -1,0 +1,71 @@
+pipeline {
+  options {
+    ansiColor('xterm')
+  }
+  agent {
+    node {
+      label 'vtb'
+    }
+  }
+  environment {
+    ANSIBLE_PASS_FILE = credentials('ansible-pass-new')
+    PROJECT_CODE = 'vtb-fluentd'
+    DEPLOY_ENV = 'stand'
+    ANSIBLE_FORCE_COLOR = true
+  }
+  stages {
+    stage('Deploy') {
+      steps {
+        sh 'pwd'
+        
+        ansiblePlaybook(
+        playbook: "${env.WORKSPACE}/jenkins/ansible/playbooks/deploy_fluentd.yml",
+        inventory: "${env.WORKSPACE}/jenkins/ansible/inventory",
+        colorized: true,
+        extras: " --extra-vars WORKSPACE=${env.WORKSPACE} \
+                  --extra-vars GIT_BRANCH=${env.GIT_BRANCH} \
+                  --extra-vars PROJECT_CODE=${env.PROJECT_CODE} \
+                  --extra-vars @${env.WORKSPACE}/jenkins/ansible/playbooks/vars/${env.DEPLOY_ENV}_environment.yml --vault-password-file=${ANSIBLE_PASS_FILE} \
+                  --extra-vars ansible_python_interpreter=/usr/bin/python3")
+      }
+    }
+  }
+
+  post {
+    success {
+      sh "rm -rf /srv/${env.PROJECT_CODE}/${env.GIT_BRANCH}/generated/${env.GIT_BRANCH}"
+      notifyBuild('SUCCESSFUL')
+    }
+  
+    unsuccessful {
+      notifyBuild('FAILED')
+    }
+  }
+}
+
+def notifyBuild(String buildStatus = 'STARTED') {
+  // build status of null means successful
+  buildStatus =  buildStatus ?: 'SUCCESSFUL'
+
+  // Default values
+  def colorName = 'RED'
+  def colorCode = '#FF0000'
+  def subject = "${buildStatus}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+  def summary = "${subject} (${env.BUILD_URL})"
+  def changelogContext = ''
+
+  // Override default values based on build status
+  if (buildStatus == 'STARTED') {
+    color = 'YELLOW'
+    colorCode = '#FFFF00'
+  } else if (buildStatus == 'SUCCESSFUL') {
+    color = 'GREEN'
+    colorCode = '#00FF00'
+  } else {
+    color = 'RED'
+    colorCode = '#FF0000'
+  }
+
+  // Send SLACK notifications
+  slackSend (color: colorCode, message: summary)
+}

@@ -65,7 +65,6 @@
     become: yes
 
 
-
 - hosts: vtb_reports
   any_errors_fatal: true
   vars_files:
@@ -94,6 +93,7 @@
       recurse: yes
     with_items:
       - "{{ TARGET_DIR }}"
+      - "{{ TARGET_DIR }}/fluentd"
     become: yes
 
   - name: Copy docker-compose.yml to stand
@@ -105,8 +105,7 @@
       mode: '774'
     with_items:
       - { src: "{{ GENERATED_FILES_PATH }}/docker-compose.yml", dest: "{{ TARGET_DIR }}" }
-      - { src: "{{ GENERATED_FILES_PATH }}/ENV/fluentd", dest: "{{ TARGET_DIR }}" }
-    
+      - { src: "{{ WORKSPACE }}/ENV/fluentd/fluent.conf", dest: "{{ TARGET_DIR }}/fluentd" }
     become: yes
 
   - name: docker-compose pull
